@@ -1,0 +1,93 @@
+---
+title: "plots_collection"
+author: "Chris"
+date: "7/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# using pacman to laod and install any packages
+install.packages("pacman")
+
+# load packages
+pacman::p_load(pacman, tidyverse, rio, dplyr, ggplot2, plotly, tidyr, rmarkdown, tinytex, lubridate, gridExtra, scales)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r dataloading, include=FALSE}
+# read base dataset
+data_event_log <- read_delim(
+  "../data/event_log.csv",
+  delim=';'
+)
+
+# read mod base dataset
+df_mod_logs <- read_delim(
+  "../data/modified_logs.csv",
+  delim=','
+)
+
+# read base dataset aggregated by case_id
+df_case_id_aggregat <- read_delim(
+  "../data/case_id_aggregated_information.csv",
+  delim=','
+)
+
+# read activity information from base dataset
+df_activity_information <- read_delim(
+  "../data/activity_information.csv",
+  delim=','
+)
+```
+
+### monthly average tp 
+
+```{r}
+# grp by month
+tp_time_monthly_avg <- 
+  df_case_id_aggregat %>% 
+  group_by(START_MONTH, START_YEAR) %>% 
+  summarise(
+    START_DT_MONTH = format(first(START_DATETIME), "%Y-%m"),
+    TP_TIME_MEAN = mean(THROUGHPUT_TIME_HOURS),
+    TP_TIME_MEDIAN = median(THROUGHPUT_TIME_HOURS),
+    CASE_COUNT = n()
+  )
+```
+
+## Including Plots
+
+
+
+```{r fig.align="center", echo = FALSE,fig.width = 14}
+ ggplot(case_id_aggregated_information, aes(x = START_DATETIME, y = THROUGHPUT_TIME_HOURS)) + 
+  geom_point(color = "darkorchid4", size=.2) +
+  labs(title = "Throughput time (in hrs) per case sorted by start date",
+           y = "Throughput time in hours",
+           x = "Start datetime")
+```
+```{r tp-time per month, fig.width = 12}
+
+
+ggplot(tp_time_monthly_avg, aes(x = START_DT_MONTH)) + 
+  geom_col(aes(y=CASE_COUNT, group=1), fill="orange", alpha=0.6) +
+  geom_line(aes(y=TP_TIME_MEAN*3, group=1), color="blue", size=.5) +
+  geom_line(aes(y=TP_TIME_MEDIAN*3, group=1), color="red", size=.5) +
+  
+  scale_fill_identity(guide = "legend", label="red = mean", name=NULL) +
+  scale_color_identity(guide = "legend", label="blue = medium", name=NULL) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(sec.axis =sec_axis( trans = ~ . /3, name="Throughput-time hours") ) +  #formats the 2nd axis
+  guides(fill = guide_legend(order = 1),  color = guide_legend(order = 2))  +
+  labs(title = "Throughput time (in hrs) per case sorted by start date")
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
